@@ -1,54 +1,73 @@
 const getState = ({ getStore, getActions, setStore }) => {
 	return {
 		store: {
-			message: null,
-			demo: [
-				{
-					title: "FIRST",
-					background: "white",
-					initial: "white"
-				},
-				{
-					title: "SECOND",
-					background: "white",
-					initial: "white"
-				}
-			]
+			user: JSON.parse( localStorage.getItem("user") )|| null,
+			token: localStorage.getItem("token") || "", 
+			apiUrl: process.env.REACT_APP_BACKEND_URL
+
+			
 		},
 		actions: {
-			// Use getActions to call a function within a fuction
-			exampleFunction: () => {
-				getActions().changeColor(0, "green");
-			},
 
-			getMessage: async () => {
-				try{
-					// fetching data from the backend
-					const resp = await fetch(process.env.BACKEND_URL + "/api/hello")
-					const data = await resp.json()
-					setStore({ message: data.message })
-					// don't forget to return something, that is how the async resolves
-					return data;
-				}catch(error){
-					console.log("Error loading message from backend", error)
+		registrationUser: async (newUser) => {
+			const store = getStore(); 
+			const response = await fetch(`https://silver-eureka-r4gqjg69gpjrc5pqq-3001.app.github.dev/api/register`, {
+				method:"POST", 
+				body: JSON.stringify(newUser), 
+				headers: {
+					"Content-Type": "application/json", 
 				}
-			},
-			changeColor: (index, color) => {
-				//get the store
-				const store = getStore();
+			});
 
-				//we have to loop the entire demo array to look for the respective index
-				//and change its color
-				const demo = store.demo.map((elm, i) => {
-					if (i === index) elm.background = color;
-					return elm;
-				});
+			let data = await response.json(); 
 
-				//reset the global store
-				setStore({ demo: demo });
+			if(response.status != 200){
+				alert(data.error)
+				return(false); 
 			}
+
+			setStore({...store, nameUserCreated: data.email});
+			return(true);
+	 	
+      },
+
+	  	login: async (newUser) => {
+			const store = getStore();
+			const response = await fetch( store.apiUrl  + "/login", {
+				method: "POST",
+				body: JSON.stringify(newUser), 
+				headers:{
+					"content-Type": "application/json", 
+				},
+			})
+
+			const data = await response.json(); 
+			if (response.ok){
+				setStore({user:data.user , token:data.token})
+				localStorage.setItem("token" , data.token)
+				localStorage.setItem("user", JSON.stringify(data.user))
+				return {"sucess": true}; 
+			}
+			else{
+				return {'success': false, 'error' : data.error }
+			}
+
+		}, 
+
+		getPrivate: async() => {
+			const store= getStore();
+			const response = await fetch(store.apiUrl + "/private")
+			const data = await response.json()
+			setStore({user: data.user})
+		}
+
+
+		}
+		
+		
+			
 		}
 	};
-};
+
 
 export default getState;
